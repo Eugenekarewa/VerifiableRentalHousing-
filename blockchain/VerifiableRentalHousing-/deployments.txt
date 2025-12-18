@@ -1,0 +1,69 @@
+Project: verifiablerentals
+Build ID: f95044 (from address: 0x260396cCA54419D691836aC1661d9743FCF95044)
+Docker Image: docker.io/th3jackal/attestor-verifiablerentals:latest
+
+Address: 0x260396cCA54419D691836aC1661d9743FCF95044
+
+Secrets configured:
+  • Secrets stored successfully
+
+Build Directory: /home/th3jackal/projects/VerifiableRentalHousing-/build/attestor_f95044
+
+Extracted Libraries:
+  • attestor_amd64.so - linux/amd64
+  • attestor_arm64.so - linux/arm64
+
+Next Steps:
+1. Your attestor image has been pushed to: docker.io/th3jackal/attestor-verifiablerentals:latest
+2. Use the extracted .so files in your applications
+3. Use this image in your deployments
+
+ℹ️  Build artifacts saved in: build/attestor_f95044
+⚠️  IMPORTANT: Save your encryption secret securely - required for future updates!
+                                                                                                                                                   
+┌──(root㉿th3jackal)-[/home/th3jackal/projects/VerifiableRentalHousing-]
+└─# 
+th3jackal@Th3jackal:/mnt/c/Users/user/OneDrive/Desktop/smartcontracts/rentals$ forge script script/deploy.s.sol --rpc-url "https://sepolia.infura.io/v3/f395f38f20584554b77c898e625a17a3" --private-key 0x393c3fd450a11a85e0b63175bb9f03d8be2a76aed8483454646c0f0d0fd7b9f1
+Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set FOUNDRY_DISABLE_NIGHTLY_WARNING in your environment. 
+
+[⠔] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: contract VerifiableRental 0x17D6eD93bFccb90e6E7e862BAd3D27Af45ab46ca
+
+== Logs ==
+  Starting deployment...
+  Deployer address: 0x260396cCA54419D691836aC1661d9743FCF95044
+  Verifier address: 0xF2Ea67F83b58225edF11F3Af4A5733B3E0844509
+  Delegated account: 0x9969827E2CB0582e08787B23F641b49Ca82bc774
+  RPC URL: https://ethereum-sepolia.publicnode.com
+  ========================================
+  ✅ VerifiableRental successfully deployed!
+  Contract address: 0x17D6eD93bFccb90e6E7e862BAd3D27Af45ab46ca
+  Owner: 0x260396cCA54419D691836aC1661d9743FCF95044
+  Verifier: 0xF2Ea67F83b58225edF11F3Af4A5733B3E0844509
+  ========================================
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 11155111
+
+Estimated gas price: 43.497184708 gwei
+
+Estimated total gas used for script: 3196658
+
+Estimated amount required: 0.139045623474305864 ETH
+
+==========================
+
+SIMULATION COMPLETE. To broadcast these transactions, add --broadcast and wallet configuration(s) to the previous command. See forge script --help for more.
+
+Transactions saved to: /mnt/c/Users/user/OneDrive/Desktop/smartcontracts/rentals/broadcast/deploy.s.sol/11155111/dry-run/run-latest.json
+
+Sensitive values saved to: /mnt/c/Users/user/OneDrive/Desktop/smartcontracts/rentals/cache/deploy.s.sol/11155111/dry-run/run-latest.json
+
+th3jackal@Th3jackal:/mnt/c/Users/user/OneDrive/Desktop/smartcontracts/rentals$
