@@ -1,41 +1,46 @@
+
 // PropertyCard component for displaying individual properties with booking functionality
 "use client";
 
 import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
-import { Property, BookingStatus } from '@/lib/contract';
-import { usePropertyAvailability, mockProperties } from '@/lib/hooks';
+import { useAuth } from '@/lib/hooks';
 import BookingModal from './BookingModal';
+
+interface Property {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  location: string;
+  image: string;
+  available: boolean;
+  bedrooms?: number;
+  bathrooms?: number;
+  maxGuests?: number;
+}
 
 interface PropertyCardProps {
   property: Property;
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
-  const { isConnected } = useAccount();
+  const { isAuthenticated } = useAuth();
   const [showBookingModal, setShowBookingModal] = useState(false);
-  
-  // Check actual property availability from the smart contract
-  const { isAvailable, isLoading: availabilityLoading } = usePropertyAvailability(property.id);
-
-  // Use contract data if available, otherwise fall back to mock data
-  const propertyAvailable = availabilityLoading ? property.available : isAvailable;
 
   const handleBookingClick = () => {
-    if (!isConnected) {
-      alert('Please connect your wallet to book a property');
+    if (!isAuthenticated) {
+      alert('Please sign in to book a property');
       return;
     }
     setShowBookingModal(true);
   };
 
+
   const getStatusColor = (available: boolean) => {
-    if (availabilityLoading) return 'bg-yellow-100 text-yellow-800';
     return available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
   const getStatusText = (available: boolean) => {
-    if (availabilityLoading) return 'Checking...';
     return available ? 'Available' : 'Unavailable';
   };
 
@@ -51,10 +56,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             </div>
           </div>
           
+
           {/* Availability Badge */}
           <div className="absolute top-4 right-4">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(propertyAvailable)}`}>
-              {getStatusText(propertyAvailable)}
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(property.available)}`}>
+              {getStatusText(property.available)}
             </span>
           </div>
         </div>
@@ -89,20 +95,19 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Action Buttons */}
           <div className="space-y-2">
+
             <button
               onClick={handleBookingClick}
-              disabled={!propertyAvailable || !isConnected || availabilityLoading}
+              disabled={!property.available || !isAuthenticated}
               className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-                propertyAvailable && isConnected && !availabilityLoading
+                property.available && isAuthenticated
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white transform hover:scale-105'
                   : 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed'
               }`}
             >
-              {!isConnected 
-                ? 'Connect Wallet to Book' 
-                : availabilityLoading 
-                ? 'Checking Availability...' 
-                : propertyAvailable 
+              {!isAuthenticated 
+                ? 'Sign In to Book' 
+                : property.available 
                 ? 'Book Now' 
                 : 'Unavailable'
               }

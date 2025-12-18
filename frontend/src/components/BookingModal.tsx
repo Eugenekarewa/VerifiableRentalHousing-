@@ -1,11 +1,21 @@
+
 // BookingModal component for handling property bookings
 "use client";
 
 import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
-import { X, Calendar, User, Shield, CheckCircle, AlertCircle } from 'lucide-react';
-import { Property } from '@/lib/contract';
-import { useRequestBooking } from '@/lib/hooks';
+import { X, Calendar, User, CreditCard, CheckCircle, AlertCircle } from 'lucide-react';
+import { useCreateBooking } from '@/lib/hooks';
+
+
+interface Property {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  location: string;
+  image: string;
+  available: boolean;
+}
 
 interface BookingModalProps {
   property: Property;
@@ -14,24 +24,21 @@ interface BookingModalProps {
 }
 
 export default function BookingModal({ property, isOpen, onClose }: BookingModalProps) {
-  const { address } = useAccount();
+
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
-  const [userData, setUserData] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [specialRequests, setSpecialRequests] = useState('');
   const [bookingResult, setBookingResult] = useState<{ success: boolean; bookingId?: number; error?: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { requestBooking, isPending, isConfirming, isSuccess, error, hash } = useRequestBooking();
+  const { mutate: createBooking, isPending, error } = useCreateBooking();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!address) {
-      alert('Please connect your wallet first');
-      return;
-    }
-
     if (!checkIn || !checkOut) {
       alert('Please select check-in and check-out dates');
       return;
@@ -42,46 +49,51 @@ export default function BookingModal({ property, isOpen, onClose }: BookingModal
       return;
     }
 
+    if (new Date(checkIn) < new Date()) {
+      alert('Check-in date cannot be in the past');
+      return;
+    }
+
+
     setIsSubmitting(true);
-
+    
     try {
-      // Create encrypted user data (in a real app, this would be properly encrypted)
-      const encryptedUserData = JSON.stringify({
-        address,
-        checkIn,
-        checkOut,
+      const bookingData = {
+        propertyId: property.id,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
         guests,
-        userData,
-        timestamp: Date.now()
-      });
+        paymentMethod,
+        specialRequests
+      };
 
-      // Convert to bytes for the smart contract
-      const encryptedUserDataBytes = new TextEncoder().encode(encryptedUserData);
-      
-      await requestBooking(property.id, Array.from(encryptedUserDataBytes));
-      
-      // The transaction receipt will be handled by the useRequestBooking hook
-      // We'll show success message when isSuccess is true
+      createBooking(bookingData, {
+        onSuccess: (response: any) => {
+          setBookingResult({
+            success: true,
+            bookingId: response?.data?.bookingId || 1,
+          });
+          setIsSubmitting(false);
+        },
+        onError: (err: any) => {
+          console.error('Booking failed:', err);
+          setBookingResult({
+            success: false,
+            error: err?.message || 'Failed to create booking'
+          });
+          setIsSubmitting(false);
+        }
+      });
       
     } catch (err) {
       console.error('Booking failed:', err);
       setBookingResult({ success: false, error: 'Failed to submit booking request' });
-    } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle transaction success
-  React.useEffect(() => {
-    if (isSuccess && hash) {
-      setBookingResult({ 
-        success: true, 
-        bookingId: 1 // In a real app, you'd parse the transaction receipt to get the actual booking ID
-      });
-    }
-  }, [isSuccess, hash]);
 
-  // Handle transaction errors
+  // Handle booking errors
   React.useEffect(() => {
     if (error) {
       setBookingResult({ success: false, error: error.message });
@@ -90,7 +102,8 @@ export default function BookingModal({ property, isOpen, onClose }: BookingModal
 
   if (!isOpen) return null;
 
-  const isProcessing = isPending || isConfirming || isSubmitting;
+
+  const isProcessing = isPending || isSubmitting;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -183,23 +196,38 @@ export default function BookingModal({ property, isOpen, onClose }: BookingModal
             </select>
           </div>
 
-          {/* User Verification Data */}
+
+          {/* Payment Method */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              <Shield className="w-4 h-4 inline mr-2" />
-              Verification Information (Optional)
+              <CreditCard className="w-4 h-4 inline mr-2" />
+              Payment Method
+            </label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              disabled={isProcessing}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100 disabled:opacity-50"
+            >
+              <option value="card">Credit Card</option>
+              <option value="debit">Debit Card</option>
+              <option value="paypal">PayPal</option>
+            </select>
+          </div>
+
+          {/* Special Requests */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Special Requests (Optional)
             </label>
             <textarea
-              value={userData}
-              onChange={(e) => setUserData(e.target.value)}
-              placeholder="Additional verification information for KRNL attestation..."
+              value={specialRequests}
+              onChange={(e) => setSpecialRequests(e.target.value)}
+              placeholder="Any special requests or notes for your stay..."
               rows={3}
               disabled={isProcessing}
               className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100 disabled:opacity-50"
             />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              This information will be encrypted and used for identity verification
-            </p>
           </div>
 
           {/* Submit Button */}
@@ -208,13 +236,15 @@ export default function BookingModal({ property, isOpen, onClose }: BookingModal
             disabled={isProcessing}
             className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
           >
+
             {isProcessing ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                {isPending ? 'Submitting...' : isConfirming ? 'Confirming...' : 'Processing...'}
+
+                Booking...
               </div>
             ) : (
-              'Request Booking'
+              'Book Now'
             )}
           </button>
         </form>
@@ -227,9 +257,10 @@ export default function BookingModal({ property, isOpen, onClose }: BookingModal
                 <CheckCircle className="w-5 h-5 mr-2" />
                 <div>
                   <p className="font-medium">Booking Request Submitted!</p>
+
                   <p className="text-sm text-slate-600 dark:text-slate-400">
                     Your booking request has been submitted successfully. 
-                    Transaction: {hash?.slice(0, 10)}...
+                    Booking ID: #{bookingResult.bookingId}
                   </p>
                 </div>
               </div>
