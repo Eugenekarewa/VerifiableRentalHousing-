@@ -2,10 +2,27 @@ const express = require('express');
 const { ethers } = require('ethers');
 const router = express.Router();
 
+
 // Contract configuration (same as frontend)
-const CONTRACT_ADDRESS = '0x17D6eD93bFccb90e6E7e862BAd3D27Af45ab46ca';
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x17D6eD93bFccb90e6E7e862BAd3D27Af45ab46ca';
 const CONTRACT_ABI = [
-  // Simplified ABI for key functions
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_verifier", "type": "address" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "bookingId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "tenant", "type": "address" },
+      { "indexed": true, "internalType": "uint256", "name": "propertyId", "type": "uint256" }
+    ],
+    "name": "BookingRequested",
+    "type": "event"
+  },
   {
     "inputs": [
       { "internalType": "uint256", "name": "propertyId", "type": "uint256" },
@@ -125,8 +142,17 @@ router.post('/create', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Check-in date cannot be in the past' });
     }
 
+
+
     // Get user's wallet for blockchain interaction
-    const userWallet = await getUserWallet(req.user.id);
+    const walletModule = require('../wallet/wallet.controller');
+    const userWallet = walletModule.getWallet ? 
+      walletModule.getWallet(req.user.id) : 
+      { address: '0x742d35Cc6634C0532925a3b8D4075Ff4E', privateKey: 'mock_private_key' };
+
+    if (!userWallet || !userWallet.address) {
+      return res.status(404).json({ error: 'Wallet not found. Please create wallet first.' });
+    }
     
     // Prepare booking data
     const bookingData = {
@@ -146,9 +172,10 @@ router.post('/create', authenticateToken, async (req, res) => {
     // Encrypt user data for blockchain
     const encryptedUserData = encryptUserData(bookingData);
 
+
     try {
       // Create booking on blockchain invisibly
-      const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL || 'https://ethereum-sepolia.publicnode.com');
+      const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL);
       const wallet = new ethers.Wallet(userWallet.privateKey, provider);
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
@@ -161,7 +188,27 @@ router.post('/create', authenticateToken, async (req, res) => {
 
       // Wait for transaction confirmation
       const receipt = await tx.wait();
-      const bookingId = extractBookingIdFromReceipt(receipt);
+      
+      // Extract booking ID from transaction receipt
+      let bookingId;
+      for (const log of receipt.logs) {
+        try {
+          const parsedLog = contract.interface.parseLog(log);
+          if (parsedLog.name === 'BookingRequested') {
+            bookingId = parsedLog.args.bookingId.toString();
+            break;
+          }
+        } catch (e) {
+          // Not our event, continue
+          continue;
+        }
+      }
+      
+      if (!bookingId) {
+        // Fallback to getNextBookingId
+        const nextId = await contract.getNextBookingId();
+        bookingId = (nextId - 1n).toString();
+      }
 
       // Store booking in database
       const booking = {
@@ -342,29 +389,9 @@ function encryptUserData(data) {
   return ethers.toUtf8Bytes(jsonString);
 }
 
-function extractBookingIdFromReceipt(receipt) {
-  // Extract booking ID from transaction receipt
-  // In production, parse events from receipt
-  return receipt.logs.length > 0 ? 
-    parseInt(receipt.logs[0].topics[1], 16) : 
-    generateBookingId();
-}
-
-function generateBookingId() {
-  return Date.now() + Math.floor(Math.random() * 1000);
-}
 
 function generateConfirmationCode(bookingId) {
   return `VR-${bookingId.toString().padStart(6, '0')}`;
-}
-
-async function getUserWallet(userId) {
-  // In production, integrate with wallet service
-  // For now, return mock wallet
-  return {
-    address: '0x742d35Cc6634C0532925a3b8D4075Ff4E',
-    privateKey: 'mock_private_key'
-  };
 }
 
 module.exports = router;

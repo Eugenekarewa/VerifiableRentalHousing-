@@ -7,25 +7,48 @@ const router = express.Router();
 const wallets = new Map();
 const keyStorage = new Map();
 
+
+
+
 // Generate invisible wallet for user
 function generateInvisibleWallet(userId, userEmail) {
-  // Generate deterministic wallet based on user data
-  const seed = crypto
-    .createHash('sha256')
-    .update(`${userId}:${userEmail}:${process.env.WALLET_SECRET || 'wallet-secret'}`)
-    .digest('hex');
-
-  const wallet = ethers.Wallet.fromPhrase(seed);
-  
-  return {
-    address: wallet.address,
-    privateKey: wallet.privateKey, // In production, this would be encrypted
-    publicKey: wallet.publicKey,
-    derivationPath: `m/44'/60'/0'/0/0`,
-    createdAt: new Date(),
-    userId,
-    userEmail
-  };
+  try {
+    // Generate deterministic private key from user data
+    const seedData = `${userId}:${userEmail}:${process.env.WALLET_SECRET || 'wallet-secret'}`;
+    const seed = crypto
+      .createHash('sha256')
+      .update(seedData)
+      .digest();
+    
+    // Create wallet directly from private key (deterministic)
+    const privateKey = '0x' + seed.toString('hex').slice(0, 64); // Ensure 32 bytes
+    const wallet = new ethers.Wallet(privateKey);
+    
+    return {
+      address: wallet.address,
+      privateKey: wallet.privateKey, // In production, this would be encrypted
+      publicKey: wallet.publicKey,
+      derivationPath: `m/44'/60'/0'/0/0`,
+      createdAt: new Date(),
+      userId,
+      userEmail,
+      isDeterministic: true
+    };
+  } catch (error) {
+    console.error('Wallet generation error:', error);
+    // Fallback to random wallet for demo
+    const wallet = ethers.Wallet.createRandom();
+    return {
+      address: wallet.address,
+      privateKey: wallet.privateKey,
+      publicKey: wallet.publicKey,
+      derivationPath: `m/44'/60'/0'/0/0`,
+      createdAt: new Date(),
+      userId,
+      userEmail,
+      isFallback: true
+    };
+  }
 }
 
 // Middleware to check authentication
@@ -86,6 +109,7 @@ router.post('/create', authenticateToken, (req, res) => {
   }
 });
 
+
 // GET /api/wallet/address - Get user's wallet address
 router.get('/address', authenticateToken, (req, res) => {
   try {
@@ -107,6 +131,14 @@ router.get('/address', authenticateToken, (req, res) => {
     res.status(500).json({ error: 'Failed to get wallet address' });
   }
 });
+
+// Helper function to get wallet by user ID (for internal use)
+function getWallet(userId) {
+  return wallets.get(userId);
+}
+
+// Export for use by other controllers
+module.exports.getWallet = getWallet;
 
 // POST /api/wallet/sign - Sign transaction invisibly
 router.post('/sign', authenticateToken, (req, res) => {
@@ -158,6 +190,7 @@ router.post('/sign', authenticateToken, (req, res) => {
   }
 });
 
+
 // GET /api/wallet/balance - Get wallet balance (for monitoring)
 router.get('/balance', authenticateToken, async (req, res) => {
   try {
@@ -168,13 +201,16 @@ router.get('/balance', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Wallet not found' });
     }
 
-    // In production, this would query the actual blockchain
-    // For now, return mock balance
+    // Query actual blockchain for balance
+    const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL);
+    const balanceWei = await provider.getBalance(wallet.address);
+    const balanceEth = ethers.formatEther(balanceWei);
+
     res.json({
       success: true,
       address: wallet.address,
       balances: {
-        ETH: '0.0', // Would be actual balance
+        ETH: balanceEth,
         token: '0'
       },
       lastChecked: new Date()
