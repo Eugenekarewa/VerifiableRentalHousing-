@@ -1,21 +1,17 @@
-"use client";
+import './globals.css'; // <--- ENSURE THIS LINE EXISTS AT THE TOP
+import { AuthProvider } from '@/context/AuthContext';
+import { ProtocolProvider } from '@/context/ProtocolContext';
 
-import "./globals.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-const queryClient = new QueryClient();
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+      {/* Make sure the body doesn't have a style that hides everything */}
+      <body className="antialiased bg-[#020617]"> 
+        <AuthProvider>
+          <ProtocolProvider>
+            {children}
+          </ProtocolProvider>
+        </AuthProvider>
       </body>
     </html>
   );
