@@ -1,12 +1,17 @@
-"use client";
-import React, { useState, useEffect } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useWalletConnection } from '@/lib/contracts/useVerifiableRental';
 import { Wallet, LogOut, Menu, X, ShieldCheck, ChevronDown } from 'lucide-react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
+  const { address, isConnected, chainId } = useWalletConnection();
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Effect to handle scroll styling
   useEffect(() => {
@@ -14,6 +19,11 @@ export const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Format address for display
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   return (
     <header 
@@ -56,15 +66,33 @@ export const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-3">
+                {/* Wallet Connection Status */}
+                {isConnected && address && (
+                  <div className="hidden sm:flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-4 py-2 rounded-xl">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">
+                      {formatAddress(address)}
+                    </span>
+                    {chainId && chainId !== 11155111 && (
+                      <span className="text-[10px] text-yellow-400">(Wrong Network)</span>
+                    )}
+                  </div>
+                )}
+
                 {/* User Role Badge */}
                 <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
                     {user.role}
                   </span>
                 </div>
 
-                {/* Account Menu Toggle */}
+                {/* RainbowKit Connect Button */}
+                <div className="relative">
+                  <ConnectButton />
+                </div>
+
+                {/* Logout Button */}
                 <button 
                   onClick={logout}
                   className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-500 hover:text-white transition-all active:scale-95"
@@ -74,23 +102,59 @@ export const Navbar = () => {
                 </button>
               </div>
             ) : (
-              <Link 
-                href="/login" 
-                className="group relative flex items-center gap-2 bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm overflow-hidden transition-all hover:pr-10 active:scale-95 shadow-xl shadow-white/5"
-              >
-                <Wallet size={16} />
-                <span className="relative z-10">Connect Portal</span>
-                <ChevronDown size={14} className="absolute right-[-20px] group-hover:right-3 opacity-0 group-hover:opacity-100 transition-all" />
-              </Link>
+              <div className="flex items-center gap-3">
+                {/* RainbowKit Connect Button for unauthenticated users */}
+                <div className="hidden sm:block">
+                  <ConnectButton accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }} />
+                </div>
+
+                <Link 
+                  href="/login" 
+                  className="group relative flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-xl font-bold text-sm overflow-hidden transition-all hover:pr-8 active:scale-95 shadow-xl shadow-white/5"
+                >
+                  <span className="relative z-10">Sign In</span>
+                </Link>
+              </div>
             )}
 
-            {/* Mobile Menu Icon (Visual Only) */}
-            <button className="md:hidden text-white p-2">
-              <Menu size={24} />
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden text-white p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </nav>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 mt-2 px-6">
+            <div className="bg-[#020617]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
+              {['Ecosystem', 'Nodes', 'Governance', 'Docs'].map((item) => (
+                <Link 
+                  key={item} 
+                  href={`/${item.toLowerCase()}`}
+                  className="block py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item}
+                </Link>
+              ))}
+              <div className="pt-4 mt-4 border-t border-white/10">
+                <Link 
+                  href="/login"
+                  className="block py-3 text-sm font-bold text-blue-400 hover:text-blue-300"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
 };
+

@@ -382,6 +382,23 @@ router.post('/:id/cancel', authenticateToken, (req, res) => {
   }
 });
 
+// GET /api/bookings/next-id - Get next booking ID (for frontend use)
+router.get('/next-id', async (req, res) => {
+  try {
+    // In production, query the blockchain for the next booking ID
+    // For now, return a simulated value
+    const nextBookingId = Math.floor(Date.now() / 1000);
+    
+    res.json({
+      success: true,
+      nextBookingId: nextBookingId.toString()
+    });
+  } catch (error) {
+    console.error('Get next booking ID error:', error);
+    res.status(500).json({ error: 'Failed to fetch next booking ID' });
+  }
+});
+
 // Helper functions
 function encryptUserData(data) {
   // In production, use proper encryption

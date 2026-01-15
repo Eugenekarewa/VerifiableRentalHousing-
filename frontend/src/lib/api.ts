@@ -63,11 +63,11 @@ export const authAPI = {
 // Properties API
 export const propertiesAPI = {
   // Get all properties with filters
-  getProperties: (filters = {}) => {
+  getProperties: (filters: Record<string, unknown> = {}) => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        params.append(key, value);
+        params.append(key, String(value));
       }
     });
     return apiClient.get(`/properties?${params.toString()}`);

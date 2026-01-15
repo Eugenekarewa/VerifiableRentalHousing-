@@ -4,6 +4,9 @@ export interface User {
   id: string;
   name: string;
   role: Role;
+  email?: string;
+  isVerified?: boolean;
+  walletAddress?: string;
 }
 
 export interface Property {

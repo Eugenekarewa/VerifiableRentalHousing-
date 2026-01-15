@@ -5,10 +5,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import { authAPI, walletAPI, propertiesAPI, bookingsAPI } from './api';
 
+// Types for auth
+interface RegisterParams {
+  email: string;
+  password: string;
+  name: string;
+}
+
+interface LoginParams {
+  email: string;
+  password: string;
+}
+
 // Authentication hook
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
@@ -39,7 +51,7 @@ export function useAuth() {
 
   // Login with Google
   const loginWithGoogle = useMutation({
-    mutationFn: authAPI.loginWithGoogle,
+    mutationFn: (credential: string) => authAPI.loginWithGoogle(credential),
     onSuccess: (response) => {
       const { token, user: userData } = response.data;
       Cookies.set('auth_token', token, { expires: 1 }); // 1 day
@@ -51,7 +63,7 @@ export function useAuth() {
 
   // Register with email
   const register = useMutation({
-    mutationFn: ({ email, password, name }) => authAPI.register(email, password, name),
+    mutationFn: (params: RegisterParams) => authAPI.register(params.email, params.password, params.name),
     onSuccess: (response) => {
       const { token, user: userData } = response.data;
       Cookies.set('auth_token', token, { expires: 1 });
@@ -63,7 +75,7 @@ export function useAuth() {
 
   // Login with email
   const login = useMutation({
-    mutationFn: ({ email, password }) => authAPI.login(email, password),
+    mutationFn: (params: LoginParams) => authAPI.login(params.email, params.password),
     onSuccess: (response) => {
       const { token, user: userData } = response.data;
       Cookies.set('auth_token', token, { expires: 1 });
@@ -103,7 +115,7 @@ export function useAuth() {
 }
 
 // Properties hook (replaces blockchain property hooks)
-export function useProperties(filters = {}) {
+export function useProperties(filters: Record<string, unknown> = {}) {
   return useQuery({
     queryKey: ['properties', filters],
     queryFn: () => propertiesAPI.getProperties(filters),
@@ -112,16 +124,16 @@ export function useProperties(filters = {}) {
 }
 
 // Single property hook
-export function useProperty(id) {
+export function useProperty(id: string | number | undefined) {
   return useQuery({
     queryKey: ['property', id],
-    queryFn: () => propertiesAPI.getProperty(id),
+    queryFn: () => propertiesAPI.getProperty(id as string),
     enabled: !!id,
   });
 }
 
 // Search suggestions hook
-export function useSearchSuggestions(query) {
+export function useSearchSuggestions(query: string) {
   return useQuery({
     queryKey: ['search-suggestions', query],
     queryFn: () => propertiesAPI.getSearchSuggestions(query),
@@ -131,10 +143,10 @@ export function useSearchSuggestions(query) {
 }
 
 // Property availability hook
-export function usePropertyAvailability(propertyId, checkInDate, checkOutDate) {
+export function usePropertyAvailability(propertyId: string | number | undefined, checkInDate: string | undefined, checkOutDate: string | undefined) {
   return useQuery({
     queryKey: ['property-availability', propertyId, checkInDate, checkOutDate],
-    queryFn: () => propertiesAPI.checkAvailability(propertyId, checkInDate, checkOutDate),
+    queryFn: () => propertiesAPI.checkAvailability(propertyId as string, checkInDate as string, checkOutDate as string),
     enabled: !!(propertyId && checkInDate && checkOutDate),
     staleTime: 1 * 60 * 1000, // 1 minute
   });
@@ -142,7 +154,7 @@ export function usePropertyAvailability(propertyId, checkInDate, checkOutDate) {
 
 // Bookings hooks
 export function useBookings() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { id?: string } | null };
   
   return useQuery({
     queryKey: ['bookings', user?.id],
@@ -152,12 +164,12 @@ export function useBookings() {
   });
 }
 
-export function useBooking(bookingId) {
-  const { user } = useAuth();
+export function useBooking(bookingId: string | number | undefined) {
+  const { user } = useAuth() as { user: { id?: string } | null };
   
   return useQuery({
     queryKey: ['booking', bookingId],
-    queryFn: () => bookingsAPI.getBooking(bookingId),
+    queryFn: () => bookingsAPI.getBooking(bookingId as string),
     enabled: !!(bookingId && user),
   });
 }
@@ -165,7 +177,7 @@ export function useBooking(bookingId) {
 // Create booking hook
 export function useCreateBooking() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { id?: string } | null };
   
   return useMutation({
     mutationFn: bookingsAPI.createBooking,
@@ -179,10 +191,10 @@ export function useCreateBooking() {
 // Cancel booking hook
 export function useCancelBooking() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { id?: string } | null };
   
   return useMutation({
-    mutationFn: ({ bookingId }) => bookingsAPI.cancelBooking(bookingId),
+    mutationFn: ({ bookingId }: { bookingId: string }) => bookingsAPI.cancelBooking(bookingId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['booking'] });
@@ -192,7 +204,7 @@ export function useCancelBooking() {
 
 // Wallet hooks (invisible to users)
 export function useWallet() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { id?: string } | null };
   
   const createWallet = useMutation({
     mutationFn: walletAPI.createWallet,
@@ -293,3 +305,4 @@ export const mockProperties = [
     maxGuests: 4
   }
 ];
+
