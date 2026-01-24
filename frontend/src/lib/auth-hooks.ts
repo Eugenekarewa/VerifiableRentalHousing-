@@ -1,246 +1,203 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { useRouter } from 'next/navigation';
-import { User } from '@/types';
 
-// API client with auth header
-const getAuthApiClient = () => {
-  const apiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  apiClient.interceptors.request.use((config) => {
-    const token = Cookies.get('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  walletAddress?: string;
+  role: string;
+  isVerified: boolean;
+  createdAt: string;
+}
 
-  return apiClient;
-};
+interface AuthResponse {
+  success: boolean;
+  token: string;
+  user: User;
+  message: string;
+}
 
-/**
- * Hook for email/password login
- */
-export function useLogin() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+export const useLogin = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const loginMutation = useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/email/login`,
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post<AuthResponse>(
+        `${API_URL}/api/auth/email/login`,
         { email, password },
         {
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
       );
-      return response.data;
-    },
-    onSuccess: (response) => {
-      const { token, user } = response;
+
+      const { token, user } = response.data;
+
       Cookies.set('auth_token', token, { expires: 1 });
-      queryClient.invalidateQueries({ queryKey: ['user'] });
-      router.push(`/dashboards/${user.role?.toLowerCase() || 'guest'}`);
-    },
-    onError: (err: unknown) => {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-    },
-  });
+      localStorage.setItem('vrp_user', JSON.stringify(user));
 
-  const login = useCallback(async (email: string, password: string) => {
-    setError(null);
-    await loginMutation.mutateAsync({ email, password });
-  }, [loginMutation]);
+      const redirectPath = user.role === 'ADMIN' 
+        ? '/dashboards/admin'
+        : user.role === 'HOST'
+        ? '/dashboards/host'
+        : '/dashboards/guest';
 
-  return {
-    login,
-    isLoading: loginMutation.isPending,
-    error,
-    clearError: () => setError(null),
-  };
-}
+      router.push(redirectPath);
 
-/**
- * Hook for email/password registration
- */
-export function useSignup() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-
-  const signupMutation = useMutation({
-    mutationFn: async ({ email, password, name }: { email: string; password: string; name: string }) => {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/email/register`,
-        { email, password, name },
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
       return response.data;
-    },
-    onSuccess: (response) => {
-      const { token, user } = response;
-      Cookies.set('auth_token', token, { expires: 1 });
-      queryClient.invalidateQueries({ queryKey: ['user'] });
-      router.push(`/dashboards/${user.role?.toLowerCase() || 'guest'}`);
-    },
-    onError: (err: unknown) => {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.error || 'Registration failed. Please try again.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-    },
-  });
-
-  const signup = useCallback(async (email: string, password: string, name: string) => {
-    setError(null);
-    await signupMutation.mutateAsync({ email, password, name });
-  }, [signupMutation]);
-
-  return {
-    signup,
-    isLoading: signupMutation.isPending,
-    error,
-    clearError: () => setError(null),
-  };
-}
-
-/**
- * Hook for Google OAuth login
- */
-export function useGoogleLogin() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-
-  const googleLoginMutation = useMutation({
-    mutationFn: async (credential: string) => {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/google`,
-        { credential },
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-      return response.data;
-    },
-    onSuccess: (response) => {
-      const { token, user } = response;
-      Cookies.set('auth_token', token, { expires: 1 });
-      queryClient.invalidateQueries({ queryKey: ['user'] });
-      router.push(`/dashboards/${user.role?.toLowerCase() || 'guest'}`);
-    },
-    onError: (err: unknown) => {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.error || 'Google login failed.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-    },
-  });
-
-  const googleLogin = useCallback(async (credential: string) => {
-    setError(null);
-    await googleLoginMutation.mutateAsync(credential);
-  }, [googleLoginMutation]);
-
-  return {
-    googleLogin,
-    isLoading: googleLoginMutation.isPending,
-    error,
-    clearError: () => setError(null),
-  };
-}
-
-/**
- * Hook for logout
- */
-export function useLogout() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-
-  const logout = useCallback(async () => {
-    try {
-      const apiClient = getAuthApiClient();
-      await apiClient.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Login failed. Please try again.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
-      Cookies.remove('auth_token');
-      queryClient.clear();
-      router.push('/login');
+      setIsLoading(false);
     }
-  }, [queryClient, router]);
+  };
 
-  return { logout };
-}
+  const clearError = () => setError(null);
 
-/**
- * Hook to get current user profile
- */
-export function useUserProfile() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  return { login, isLoading, error, clearError };
+};
+
+export const useSignup = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const signup = async (name: string, email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post<AuthResponse>(
+        `${API_URL}/api/auth/email/register`,
+        { name, email, password },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const { token, user } = response.data;
+
+      Cookies.set('auth_token', token, { expires: 1 });
+      localStorage.setItem('vrp_user', JSON.stringify(user));
+
+      router.push('/login');
+
+      return response.data;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearError = () => setError(null);
+
+  return { signup, isLoading, error, clearError };
+};
+
+export const useGoogleLogin = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUser = async () => {
+  const googleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      setError('Google OAuth not yet implemented');
+    } catch (err: any) {
+      setError('Google login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { googleLogin, isLoading, error };
+};
+
+export const useLogout = () => {
+  const router = useRouter();
+
+  const logout = async () => {
     try {
       const token = Cookies.get('auth_token');
-      if (!token) {
-        setLoading(false);
-        return;
+      
+      if (token) {
+        await axios.post(
+          `${API_URL}/api/auth/logout`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       }
-
-      const apiClient = getAuthApiClient();
-      const response = await apiClient.get('/auth/profile');
-      setUser(response.data);
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        Cookies.remove('auth_token');
-      }
-      setError('Failed to fetch user profile');
+      console.error('Logout API call failed:', err);
     } finally {
-      setLoading(false);
+      Cookies.remove('auth_token');
+      localStorage.removeItem('vrp_user');
+      localStorage.removeItem('vrp_session');
+      
+      router.push('/login');
     }
   };
 
-  useEffect(() => {
-    fetchUser();
-  }, []);
+  return { logout };
+};
 
-  return { user, loading, error, refetch: fetchUser };
-}
+export const useCurrentUser = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-/**
- * Hook to check authentication status
- */
-export function useAuthStatus() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const fetchUser = async () => {
     const token = Cookies.get('auth_token');
-    setIsAuthenticated(!!token);
-    setLoading(false);
-  }, []);
+    
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
 
-  return { isAuthenticated, loading };
-}
+    try {
+      const response = await axios.get<{ success: boolean; user: User }>(
+        `${API_URL}/api/auth/me`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
+      setUser(response.data.user);
+      localStorage.setItem('vrp_user', JSON.stringify(response.data.user));
+    } catch (err) {
+      console.error('Failed to fetch user:', err);
+      Cookies.remove('auth_token');
+      localStorage.removeItem('vrp_user');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { user, isLoading, fetchUser };
+};
