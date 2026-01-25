@@ -11,14 +11,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!isLoading) {
+      console.log('DashboardLayout check:', { user, role: user?.role, pathname });
       if (!user) {
+        console.log('No user, redirecting to /login');
         router.replace('/login');
       } else {
         const roleInPath = pathname.split('/')[2];
-        if (user.role.toLowerCase() !== roleInPath) {
-          router.replace(`/dashboards/${user.role.toLowerCase()}`);
+        const userRoleLower = user.role.toLowerCase();
+        if (userRoleLower !== roleInPath) {
+          console.log(`Role mismatch (${userRoleLower} vs ${roleInPath}), redirecting`);
+          router.replace(`/dashboards/${userRoleLower}`);
         }
       }
+    } else {
+      console.log('DashboardLayout loading...');
     }
   }, [user, isLoading, pathname, router]);
 

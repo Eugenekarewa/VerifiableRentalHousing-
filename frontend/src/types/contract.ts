@@ -43,16 +43,23 @@ export interface Booking {
 
 // Property interface for frontend
 export interface Property {
-  id: number;
-  name: string;
-  description: string;
+  id: number | string;
+  name?: string;
+  description?: string;
   price: number;
   location: string;
-  image: string;
-  available: boolean;
+  images?: string[];
+  amenities?: string[];
   bedrooms?: number;
   bathrooms?: number;
   maxGuests?: number;
+  available?: boolean;
+  owner?: {
+    id: string;
+    name: string;
+    rating: number;
+    verified: boolean;
+  };
 }
 
 // Booking request parameters

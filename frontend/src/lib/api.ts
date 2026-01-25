@@ -40,23 +40,23 @@ apiClient.interceptors.response.use(
 // Authentication API
 export const authAPI = {
   // Google OAuth login
-  loginWithGoogle: (credential) => 
+  loginWithGoogle: (credential) =>
     apiClient.post('/auth/google', { credential }),
-  
+
   // Email/password registration
   register: (email, password, name) =>
     apiClient.post('/auth/email/register', { email, password, name }),
-  
+
   // Email/password login
   login: (email, password) =>
     apiClient.post('/auth/email/login', { email, password }),
-  
+
   // Logout
-  logout: () => 
+  logout: () =>
     apiClient.post('/auth/logout'),
-  
+
   // Get user profile
-  getProfile: () => 
+  getProfile: () =>
     apiClient.get('/auth/profile'),
 };
 
@@ -72,89 +72,93 @@ export const propertiesAPI = {
     });
     return apiClient.get(`/properties?${params.toString()}`);
   },
-  
+
   // Get specific property
-  getProperty: (id) => 
+  getProperty: (id) =>
     apiClient.get(`/properties/${id}`),
-  
+
   // Search suggestions
-  getSearchSuggestions: (query) => 
+  getSearchSuggestions: (query) =>
     apiClient.get(`/properties/search/suggestions?q=${encodeURIComponent(query)}`),
-  
+
   // Check availability
   checkAvailability: (propertyId, checkInDate, checkOutDate) =>
     apiClient.post(`/properties/${propertyId}/availability`, {
       checkInDate,
       checkOutDate
     }),
+
+  // Create new property
+  createProperty: (propertyData: any) =>
+    apiClient.post('/properties', propertyData),
 };
 
 // Bookings API
 export const bookingsAPI = {
   // Create new booking
-  createBooking: (bookingData) => 
+  createBooking: (bookingData) =>
     apiClient.post('/bookings/create', bookingData),
-  
+
   // Get user bookings
-  getUserBookings: () => 
+  getUserBookings: () =>
     apiClient.get('/bookings/user'),
-  
+
   // Get specific booking
-  getBooking: (id) => 
+  getBooking: (id) =>
     apiClient.get(`/bookings/${id}`),
-  
+
   // Cancel booking
-  cancelBooking: (id) => 
+  cancelBooking: (id) =>
     apiClient.post(`/bookings/${id}/cancel`),
 };
 
 // Wallet API
 export const walletAPI = {
   // Create wallet
-  createWallet: () => 
+  createWallet: () =>
     apiClient.post('/wallet/create'),
-  
+
   // Get wallet address
-  getWalletAddress: () => 
+  getWalletAddress: () =>
     apiClient.get('/wallet/address'),
-  
+
   // Sign transaction (for backend use)
-  signTransaction: (transaction) => 
+  signTransaction: (transaction) =>
     apiClient.post('/wallet/sign', transaction),
-  
+
   // Get balance
-  getBalance: () => 
+  getBalance: () =>
     apiClient.get('/wallet/balance'),
-  
+
   // Estimate gas
-  estimateGas: (operation) => 
+  estimateGas: (operation) =>
     apiClient.post('/wallet/gas-estimate', { operation }),
 };
 
 // KRNL API
 export const krnlAPI = {
   // Verify identity
-  verifyIdentity: (tenantData) => 
+  verifyIdentity: (tenantData) =>
     apiClient.post('/krnl/verify/identity', { tenantData }),
-  
+
   // Check availability
-  checkAvailability: (propertyId, dates) => 
+  checkAvailability: (propertyId, dates) =>
     apiClient.post('/krnl/check/availability', { propertyId, ...dates }),
-  
+
   // Authorize escrow
-  authorizeEscrow: (bookingId, depositAmount) => 
+  authorizeEscrow: (bookingId, depositAmount) =>
     apiClient.post('/krnl/authorize/escrow', { bookingId, depositAmount }),
-  
+
   // Resolve dispute
-  resolveDispute: (disputeData) => 
+  resolveDispute: (disputeData) =>
     apiClient.post('/krnl/resolve/dispute', disputeData),
-  
+
   // Verify proof
-  verifyProof: (proofHash) => 
+  verifyProof: (proofHash) =>
     apiClient.get(`/krnl/proofs/${proofHash}`),
-  
+
   // Get KRNL status
-  getStatus: () => 
+  getStatus: () =>
     apiClient.get('/krnl/status'),
 };
 

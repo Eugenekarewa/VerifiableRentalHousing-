@@ -27,10 +27,10 @@ const ProtocolContext = createContext<ProtocolContextType | undefined>(undefined
 
 export const ProtocolProvider = ({ children }: { children: ReactNode }) => {
   const [properties, setProperties] = useState<GlobalProperty[]>([
-    { 
-      id: '1', title: 'The Glass Horizon', price: 1250, location: 'Malibu, CA', 
-      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750', 
-      status: 'VERIFIED_ACTIVE' 
+    {
+      id: '1', title: 'The Glass Horizon', price: 1250, location: 'Malibu, CA',
+      image: 'https://images.unsplash.com/photo-1600596542815-e25fa1108638?w=800',
+      status: 'VERIFIED_ACTIVE'
     }
   ]);
 
@@ -41,8 +41,8 @@ export const ProtocolProvider = ({ children }: { children: ReactNode }) => {
 
   // 2. Guest Action: Requests the stay
   const guestBookProperty = (id: string, guestName: string) => {
-    setProperties(prev => prev.map(p => p.id === id ? { 
-      ...p, status: 'OCCUPIED', currentGuest: guestName, txHash: '0x' + Math.random().toString(16).slice(2, 10) 
+    setProperties(prev => prev.map(p => p.id === id ? {
+      ...p, status: 'OCCUPIED', currentGuest: guestName, txHash: '0x' + Math.random().toString(16).slice(2, 10)
     } : p));
   };
 
@@ -56,7 +56,7 @@ export const ProtocolProvider = ({ children }: { children: ReactNode }) => {
     const newProp: GlobalProperty = {
       id: Date.now().toString(),
       title, price, location,
-      image: 'https://images.unsplash.com/photo-1600585154340-be6199f7a099',
+      image: 'https://images.unsplash.com/photo-1600596542815-e25fa1108638?w=800',
       status: 'PENDING_ADMIN'
     };
     setProperties(prev => [...prev, newProp]);

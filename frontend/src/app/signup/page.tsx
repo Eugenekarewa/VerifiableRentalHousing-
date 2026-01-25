@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
 // Form validation schema
@@ -16,6 +16,7 @@ const signupSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  role: z.enum(['GUEST', 'HOST']).default('GUEST'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -32,6 +33,7 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -40,8 +42,11 @@ export default function SignupPage() {
       email: '',
       password: '',
       confirmPassword: '',
+      role: 'GUEST',
     },
   });
+
+  const selectedRole = watch('role');
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupFormData) => {
@@ -51,6 +56,7 @@ export default function SignupPage() {
           email: data.email,
           password: data.password,
           name: data.name,
+          role: data.role,
         },
         {
           headers: {
@@ -64,12 +70,18 @@ export default function SignupPage() {
       const { token, user } = response;
       // Store token in cookies
       Cookies.set('auth_token', token, { expires: 1 });
-      
+
       // Invalidate queries and update local state
       queryClient.invalidateQueries({ queryKey: ['user'] });
-      
-      // Redirect to login page (or dashboard if auto-login works)
-      router.push('/login');
+
+      // Auto-login: redirect based on user role
+      const redirectPath = user.role === 'ADMIN'
+        ? '/dashboards/admin'
+        : user.role === 'HOST'
+          ? '/dashboards/host'
+          : '/dashboards/guest';
+
+      router.push(redirectPath);
     },
     onError: (error: unknown) => {
       if (axios.isAxiosError(error)) {
@@ -194,6 +206,46 @@ export default function SignupPage() {
             )}
           </div>
 
+          {/* Account Type Selector */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              I want to...
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <label className={`
+                relative flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all
+                ${selectedRole === 'GUEST'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-slate-200 hover:border-slate-300 text-slate-600'}
+              `}>
+                <input
+                  type="radio"
+                  value="GUEST"
+                  className="sr-only"
+                  {...register('role')}
+                />
+                <User size={20} />
+                <span className="font-bold">Rent</span>
+              </label>
+
+              <label className={`
+                relative flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all
+                ${selectedRole === 'HOST'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-slate-200 hover:border-slate-300 text-slate-600'}
+              `}>
+                <input
+                  type="radio"
+                  value="HOST"
+                  className="sr-only"
+                  {...register('role')}
+                />
+                <ShieldCheck size={20} />
+                <span className="font-bold">Host</span>
+              </label>
+            </div>
+          </div>
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -224,13 +276,18 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Google Login Button */}
+        {/* Google Signup Button */}
         <button
           type="button"
           className="w-full py-3 px-4 bg-white text-slate-700 font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-3"
           onClick={() => {
-            // Google OAuth flow would be initiated here
-            alert('Google OAuth will be implemented with proper credentials');
+            const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+            if (!googleClientId) {
+              alert('Google OAuth is not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID in your environment variables.');
+              return;
+            }
+            // Redirect to Google OAuth init endpoint
+            window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/google/init`;
           }}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
