@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "Backend orchestrator for Verifiable Rental Protocol",
   "main": "src/server.js",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "build": "echo 'Build complete'",
-    "test": "jest"
+    "build": "echo 'No build step required'",
+    "vercel-build": "echo 'Production build starting'"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -34,7 +37,13 @@
     "jest": "^29.7.0",
     "supertest": "^6.3.3"
   },
-  "keywords": ["rental", "blockchain", "verifiable", "backend", "api"],
+  "keywords": [
+    "rental",
+    "blockchain",
+    "verifiable",
+    "backend",
+    "api"
+  ],
   "author": "Verifiable Rental Protocol",
   "license": "MIT"
 }

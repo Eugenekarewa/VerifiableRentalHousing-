@@ -1,6 +1,15 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  
+  // Environment variables for production
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
+
   images: {
+    unoptimized: true, // Required for many Vercel/Static deployments
     remotePatterns: [
       {
         protocol: 'https',
@@ -14,24 +23,23 @@ const nextConfig = {
       },
     ],
   },
-  // Use Turbopack (default in Next.js 16)
-  turbopack: {},
-  
-  // Experimental features
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
-  },
-  
-  // Transpile packages that have issues
+
+  // Transpile packages for blockchain/web3 stability
   transpilePackages: [
     '@rainbow-me/rainbowkit',
     'wagmi',
     'viem',
     '@tanstack/react-query',
   ],
+
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+
+  poweredByHeader: false,
+  compress: true,
 };
 
-module.exports = nextConfig;
-
+export default nextConfig;
