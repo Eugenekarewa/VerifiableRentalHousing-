@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,6 +6,9 @@ const morgan = require('morgan');
 const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+// Import database connection
+const connectDB = require('./config/db');
 
 // Import route modules
 const authRoutes = require('./auth/auth.controller');
@@ -17,6 +19,9 @@ const krnlRoutes = require('./krnl/krnl.controller');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Connect to Database
+connectDB();
 
 // Security middleware
 app.use(helmet());
@@ -32,8 +37,8 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
@@ -50,7 +55,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -63,7 +68,8 @@ app.get('/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     service: 'Verifiable Rental Backend',
-    version: '1.0.0'
+    version: '1.0.0',
+    database: 'Connected'
   });
 });
 
@@ -101,6 +107,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Verifiable Rental Backend running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 Database: MongoDB`);
 });
 
 module.exports = app;
